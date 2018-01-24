@@ -1,0 +1,264 @@
+# Medical Alert System
+# By: Graham Smith
+# Notes:  Tested examples of an automated voice call and a SMS text message using Twilio
+
+homeassistant:
+  # Name of the location where Home Assistant is running
+  name: !secret name
+  # Location required to calculate the time the sun rises and sets
+  latitude: !secret latitude
+  longitude: !secret longitude
+  # Impacts weather/sunrise data (altitude above sea level in meters)
+  elevation: !secret elevation
+  # metric for Metric, imperial for Imperial
+  unit_system: metric
+  # Pick yours from here: http://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+  time_zone: !secret time_zone
+  customize: !include customize.yaml
+
+
+http:
+  api_password: !secret api_password
+#This works for https://gb53smith.duckdns.org from an external network
+#Need to create a new URL for a second system
+  ssl_certificate: /ssl/fullchain.pem
+  ssl_key: /ssl/privkey.pem
+  base_url: gb53smith.duckdns.org:8123
+
+
+# Enables the front end
+frontend:
+#Breaks climate display on IOS app
+  javascript_version: es5
+
+
+# Enables configuration UI
+config:
+
+# Checks for available updates
+updater:
+
+# Discover some devices automatically
+discovery:
+
+# View all events in a logbook
+logbook:
+
+# Keep database from growing too large by purging
+# No need to log watchdog
+# Must log automations to restore_state of automations on restart
+recorder:
+  purge_interval: 5
+  purge_keep_days: 7
+
+# Enables support for tracking state changes over time.
+# Exclude those domains and entities that do not change much 
+history:
+ 
+#Send notifications to the iOS app on my iPhone
+ios:
+  
+#Replace this with Raspberry GPIO inputs from RF433 receiver
+#Red button triggers alarm that can be canceled by pressing the black button 
+input_boolean:
+  red:
+    name: "Red Button"
+    initial: off 
+  black:
+    name: "Black Button"
+    initial: off
+
+#Numbers to send text messages to when alarm is triggered for more than 30 seconds
+
+#Note: Use input_text to enter phone numbers with a numeric check
+input_text:
+  help1:
+    name: Help Message
+  phone1:
+    name: First Phone Number
+    min: 10
+    max: 10
+    pattern: '[0-9]*'
+  phone2:
+    name: Second Phone Number
+    min: 10
+    max: 10
+    pattern: '[0-9]*'
+  
+switch:    
+  - platform: rpi_gpio
+    ports:
+      11: Alarm
+      12: Buzzer
+      
+automation pre45:
+  - alias: Red Button Pushed
+    trigger:
+      platform: state
+      entity_id: input_boolean.red
+      to: 'on'
+    condition:
+      condition: state    
+      entity_id: input_boolean.black
+      state: 'off'  
+    action:
+      service: homeassistant.turn_on
+      entity_id: 
+        - switch.alarm
+        - script.alarm
+ 
+  - alias: Black Button Pushed
+    trigger:
+      platform: state
+      entity_id: input_boolean.black
+      to: 'on'
+    condition:
+      condition: state      
+      entity_id: input_boolean.red
+      state: 'off'  
+    action:
+      service: homeassistant.turn_off
+      entity_id: 
+        - switch.alarm
+        - switch.buzzer
+        - script.alarm
+        - script.alarm_timer
+        
+  - alias: Slow Buzzer
+    initial_state: false
+    trigger:
+      platform: time
+      seconds: '/5'
+    condition:
+      condition: state    
+      entity_id: automation.fast_buzzer
+      state: 'off'  
+    action:
+      - service: switch.turn_on
+        entity_id: 
+          - switch.buzzer
+      - delay:
+          milliseconds: 1000
+      - service: switch.turn_off
+        entity_id: 
+          - switch.buzzer    
+
+  - alias: Fast Buzzer
+    initial_state: false
+    trigger:
+      platform: time
+      seconds: '/2'
+    action:
+      - service: switch.turn_on
+        entity_id: 
+          - switch.buzzer
+      - delay:
+          milliseconds: 1000
+      - service: switch.turn_off
+        entity_id: 
+          - switch.buzzer  
+          
+  - alias: Alarm OFF
+    trigger:
+      platform: state
+      entity_id: switch.alarm
+      to: 'off'
+    action:
+      service: homeassistant.turn_off
+      entity_id:
+        - automation.slow_buzzer
+        - automation.fast_buzzer
+
+  - alias: Alarm Cancelled
+    trigger:
+      platform: state
+      entity_id: automation.fast_buzzer
+      to: 'off'
+    action:
+      service: notify.ios_grahams_iphone
+      data:
+        message: "Medical Alarm Cancelled"
+
+script:        
+# Alarm timer is reset if red button pushed again
+  alarm:
+    alias: "Resetable Alarm"
+    sequence:
+      - service: homeassistant.turn_off
+        data:
+          entity_id: 
+            - script.alarm_timer
+            - switch.buzzer
+      - service: homeassistant.turn_on
+        data:
+          entity_id:
+            - switch.alarm          
+            - script.alarm_timer 
+
+  alarm_timer:
+    alias: "Alarm Timer"
+    sequence:
+      - service: homeassistant.turn_on
+        data:
+          entity_id: 
+            - automation.slow_buzzer
+      - delay:
+          minutes: 0
+          seconds: 30  
+      - service: homeassistant.turn_off
+        data:
+          entity_id: 
+            - automation.slow_buzzer
+      - service: homeassistant.turn_on
+        data:
+          entity_id: 
+            - automation.fast_buzzer
+      - service: notify.ios_grahams_iphone
+        data:
+          message: "Medical Alarm Triggered"
+      - service: notify.medical_alert_call
+        data_template:
+          message: >
+            {{ states('input_text.help1')}}
+          target: >
+            +1{{ states('input_text.phone1')}}
+      - service: notify.medical_alert_sms
+        data_template:
+          message: >
+            {{ states('input_text.help1')}}
+          target: >
+            +1{{ states('input_text.phone2')}}       
+# I can add a condition to check for more phone number to send to
+
+group:
+  default_view:
+    view: True  
+    icon: mdi:home
+    entities:
+      - switch.alarm
+      - input_text.help1
+      - input_text.phone1
+      - input_text.phone2
+# Use a second tab for back end information not regularly accessed
+  Back End:
+    view: True
+    entities:
+      - input_boolean.red
+      - input_boolean.black    
+      - switch.buzzer
+      - script.alarm
+      - script.alarm_timer
+      - automation.slow_buzzer
+      - automation.fast_buzzer     
+
+twilio:
+  account_sid: !secret account_sid
+  auth_token: !secret auth_token
+  
+notify:
+  - name: Medical Alert Call
+    platform: twilio_call
+    from_number: !secret from_number
+  - name: Medical Alert SMS
+    platform: twilio_sms
+    from_number: !secret from_number
