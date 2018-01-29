@@ -14,21 +14,28 @@ homeassistant:
   unit_system: metric
   # Pick yours from here: http://en.wikipedia.org/wiki/List_of_tz_database_time_zones
   time_zone: !secret time_zone
-  customize: !include customize.yaml
 
 
 http:
   api_password: !secret api_password
-#This works for https://gb53smith.duckdns.org from an external network
-#Need to create a new URL for a second system
   ssl_certificate: /ssl/fullchain.pem
   ssl_key: /ssl/privkey.pem
-  base_url: gb53smith.duckdns.org:8123
+  base_url: !secret base_url
 
+twilio:
+  account_sid: !secret account_sid
+  auth_token: !secret auth_token
 
+notify:
+  - name: Medical Alert Call
+    platform: twilio_call
+    from_number: !secret from_number
+  - name: Medical Alert SMS
+    platform: twilio_sms
+    from_number: !secret from_number
+    
 # Enables the front end
 frontend:
-#Breaks climate display on IOS app
   javascript_version: es5
 
 
@@ -45,7 +52,6 @@ discovery:
 logbook:
 
 # Keep database from growing too large by purging
-# No need to log watchdog
 # Must log automations to restore_state of automations on restart
 recorder:
   purge_interval: 5
@@ -54,52 +60,126 @@ recorder:
 # Enables support for tracking state changes over time.
 # Exclude those domains and entities that do not change much 
 history:
- 
+
 #Send notifications to the iOS app on my iPhone
 ios:
-  
-#Replace this with Raspberry GPIO inputs from RF433 receiver
-#Red button triggers alarm that can be canceled by pressing the black button 
-input_boolean:
-  red:
-    name: "Red Button"
-    initial: off 
-  black:
-    name: "Black Button"
-    initial: off
+########## HARDWARE CONNECTIONS #############
+# Connect RX480R_4CH module pins to Raspberry PI I/O Pins
+#  RX480R_4CH  -> Raspberry PI
+#      3.3V    ->      1
+#      data1   ->     11
+#      data2   ->     12
+# Connect Buzzer to Raspberry PI PIN 8.  Transistor driver required
+# Alarm is available on Raspberry PI PIN 13 for an LED?
+# These are GPIO# not PIN#
+# Includes 50 msec debounce
+binary_sensor:
+  - platform: rpi_gpio
+    ports:
+      17: on_button
+      18: off_button
 
-#Numbers to send text messages to when alarm is triggered for more than 30 seconds
+# Alarm can be canceled by pressing the OFF button before the notify switch
+# is triggered after 30 seconds.  After notify i s triggered it can be
+# canceled by pressing BOTH ON and OFF buttons for 5 seconds or
+# Manually sliding the alarm switch OFF from a Web Browser
 
-#Note: Use input_text to enter phone numbers with a numeric check
-input_text:
-  help1:
-    name: Help Message
-  phone1:
-    name: First Phone Number
-    min: 10
-    max: 10
-    pattern: '[0-9]*'
-  phone2:
-    name: Second Phone Number
-    min: 10
-    max: 10
-    pattern: '[0-9]*'
-  
 switch:    
   - platform: rpi_gpio
     ports:
-      11: Alarm
-      12: Buzzer
+      27: Alarm
+      14: Buzzer
+
+#Note: Use input_text to enter phone numbers with a numeric check
+
+input_select: 
+  alarm_cancel:
+    name: Alarm Cancel Options
+    options:
+      - OFF
+      - Send Message
+  type1:
+    name: Type 1
+    options:
+      - OFF
+      - Voice
+      - Text
+      - Both
+  type2:
+    name: Type 2
+    options:
+      - OFF
+      - Voice
+      - Text
+      - Both      
+  type3:
+    name: Type 3
+    options:
+      - OFF
+      - Voice
+      - Text
+      - Both      
+  type4:
+    name: Type 4
+    options:
+      - OFF
+      - Voice
+      - Text
+      - Both      
       
+input_text:
+  cancel_message:
+    name: Cancel Message
+#
+  contact1:
+    name: Contact Name 1  
+  phone1:
+    name: Phone Number 1
+    min: 10
+    max: 10
+    pattern: '[0-9]*'
+  message1:
+    name: Help Message 1 
+#    
+  contact2:
+    name: Contact Name 2  
+  phone2:
+    name: Phone Number 2
+    min: 10
+    max: 10
+    pattern: '[0-9]*'
+  message2:
+    name: Help Message 2
+#    
+  contact3:
+    name: Contact Name 3  
+  phone3:
+    name: Phone Number 3
+    min: 10
+    max: 10
+    pattern: '[0-9]*'
+  message3:
+    name: Help Message 3
+#    
+  contact4:
+    name: Contact Name 4  
+  phone4:
+    name: Phone Number 4
+    min: 10
+    max: 10
+    pattern: '[0-9]*'
+  message4:
+    name: Help Message 4
+    
 automation pre45:
-  - alias: Red Button Pushed
+  - alias: ON Button Pushed
     trigger:
       platform: state
-      entity_id: input_boolean.red
+      entity_id: binary_sensor.on_button
       to: 'on'
     condition:
       condition: state    
-      entity_id: input_boolean.black
+      entity_id: binary_sensor.off_button
       state: 'off'  
     action:
       service: homeassistant.turn_on
@@ -107,22 +187,49 @@ automation pre45:
         - switch.alarm
         - script.alarm
  
-  - alias: Black Button Pushed
+  - alias: OFF Button Pushed Before Notify
     trigger:
       platform: state
-      entity_id: input_boolean.black
+      entity_id: binary_sensor.off_button
       to: 'on'
     condition:
-      condition: state      
-      entity_id: input_boolean.red
-      state: 'off'  
+      condition: and
+      conditions:
+        - condition: state
+          entity_id: 'binary_sensor.on_button'
+          state: 'off'
+        - condition: state      
+          entity_id: 'automation.fast_buzzer'
+          state: 'off'            
     action:
       service: homeassistant.turn_off
       entity_id: 
-        - switch.alarm
-        - switch.buzzer
         - script.alarm
         - script.alarm_timer
+        - switch.alarm
+
+  - alias: OFF Button Pushed After Notify
+    trigger:
+      platform: state
+      entity_id: binary_sensor.off_button
+      to: 'on'
+      for:
+        seconds: 5
+    condition:
+      condition: and
+      conditions:
+        - condition: state      
+          entity_id: binary_sensor.off_button
+          state: 'on'
+        - condition: state      
+          entity_id: automation.fast_buzzer
+          state: 'on'            
+    action:
+      service: homeassistant.turn_off
+      entity_id: 
+        - script.alarm
+        - script.alarm_timer
+        - switch.alarm
         
   - alias: Slow Buzzer
     initial_state: false
@@ -166,21 +273,437 @@ automation pre45:
     action:
       service: homeassistant.turn_off
       entity_id:
+        - switch.buzzer
         - automation.slow_buzzer
         - automation.fast_buzzer
 
-  - alias: Alarm Cancelled
+       
+  - alias: Contact Voice 1
+    trigger:
+      platform: state
+      entity_id: automation.fast_buzzer
+      to: 'on'
+      for:
+        seconds: 1
+    condition:
+      condition : or
+      conditions:
+        - condition: state      
+          entity_id: input_select.type1
+          state: 'Voice'
+        - condition: state      
+          entity_id: input_select.type1
+          state: 'Both'
+    action:
+      - service: notify.medical_alert_call
+        data_template:
+          message: >
+            {{ states('input_text.message1')}}
+          target: >
+            +1{{ states('input_text.phone1')}}
+            
+  - alias: Contact Text 1
+    trigger:
+      platform: state
+      entity_id: automation.fast_buzzer
+      to: 'on'
+      for:
+        seconds: 1
+    condition:
+      condition : or
+      conditions:
+        - condition: state      
+          entity_id: input_select.type1
+          state: 'Text'
+        - condition: state      
+          entity_id: input_select.type1
+          state: 'Both'
+    action:
+      - service: notify.medical_alert_sms
+        data_template:
+          message: >
+            {{ states('input_text.message1')}}
+          target: >
+            +1{{ states('input_text.phone1')}}
+
+  - alias: Contact Voice 2
+    trigger:
+      platform: state
+      entity_id: automation.fast_buzzer
+      to: 'on'
+      for:
+        seconds: 2
+    condition:
+      condition : or
+      conditions:
+        - condition: state      
+          entity_id: input_select.type2
+          state: 'Voice'
+        - condition: state      
+          entity_id: input_select.type2
+          state: 'Both'
+    action:
+      - service: notify.medical_alert_call
+        data_template:
+          message: >
+            {{ states('input_text.message2')}}
+          target: >
+            +1{{ states('input_text.phone2')}}
+            
+  - alias: Contact Text 2
+    trigger:
+      platform: state
+      entity_id: automation.fast_buzzer
+      to: 'on'
+      for:
+        seconds: 2
+    condition:
+      condition : or
+      conditions:
+        - condition: state      
+          entity_id: input_select.type2
+          state: 'Text'
+        - condition: state      
+          entity_id: input_select.type2
+          state: 'Both'
+    action:
+      - service: notify.medical_alert_sms
+        data_template:
+          message: >
+            {{ states('input_text.message2')}}
+          target: >
+            +1{{ states('input_text.phone2')}}
+            
+  - alias: Contact Voice 3
+    trigger:
+      platform: state
+      entity_id: automation.fast_buzzer
+      to: 'on'
+      for:
+        seconds: 3
+    condition:
+      condition : or
+      conditions:
+        - condition: state      
+          entity_id: input_select.type3
+          state: 'Voice'
+        - condition: state      
+          entity_id: input_select.type3
+          state: 'Both'
+    action:
+      - service: notify.medical_alert_call
+        data_template:
+          message: >
+            {{ states('input_text.message3')}}
+          target: >
+            +1{{ states('input_text.phone3')}}
+            
+  - alias: Contact Text 3
+    trigger:
+      platform: state
+      entity_id: automation.fast_buzzer
+      to: 'on'
+      for:
+        seconds: 3
+    condition:
+      condition : or
+      conditions:
+        - condition: state      
+          entity_id: input_select.type3
+          state: 'Text'
+        - condition: state      
+          entity_id: input_select.type3
+          state: 'Both'
+    action:
+      - service: notify.medical_alert_sms
+        data_template:
+          message: >
+            {{ states('input_text.message3')}}
+          target: >
+            +1{{ states('input_text.phone3')}}
+            
+  - alias: Contact Voice 4
+    trigger:
+      platform: state
+      entity_id: automation.fast_buzzer
+      to: 'on'
+      for:
+        seconds: 4
+    condition:
+      condition : or
+      conditions:
+        - condition: state      
+          entity_id: input_select.type4
+          state: 'Voice'
+        - condition: state      
+          entity_id: input_select.type4
+          state: 'Both'
+    action:
+      - service: notify.medical_alert_call
+        data_template:
+          message: >
+            {{ states('input_text.message4')}}
+          target: >
+            +1{{ states('input_text.phone4')}}
+            
+  - alias: Contact Text 4
+    trigger:
+      platform: state
+      entity_id: automation.fast_buzzer
+      to: 'on'
+      for:
+        seconds: 4
+    condition:
+      condition : or
+      conditions:
+        - condition: state      
+          entity_id: input_select.type4
+          state: 'Text'
+        - condition: state      
+          entity_id: input_select.type4
+          state: 'Both'
+    action:
+      - service: notify.medical_alert_sms
+        data_template:
+          message: >
+            {{ states('input_text.message4')}}
+          target: >
+            +1{{ states('input_text.phone4')}}
+           
+  - alias: Contact Cancel Voice 1
     trigger:
       platform: state
       entity_id: automation.fast_buzzer
       to: 'off'
+      for:
+        seconds: 1
+    condition:
+    condition : and
+    conditions:
+        - condition: state      
+          entity_id: input_select.alarm_cancel
+          state: 'Send Message'
+        - condition : or
+          conditions:
+            - condition: state      
+              entity_id: input_select.type1
+              state: 'Voice'
+            - condition: state      
+              entity_id: input_select.type1
+              state: 'Both'
     action:
-      service: notify.ios_grahams_iphone
-      data:
-        message: "Medical Alarm Cancelled"
+      - service: notify.medical_alert_call
+        data_template:
+          message: >
+            {{ states('input_text.cancel_message')}}
+          target: >
+            +1{{ states('input_text.phone1')}}
+            
+  - alias: Contact Cancel Text 1
+    trigger:
+      platform: state
+      entity_id: automation.fast_buzzer
+      to: 'off'
+      for:
+        seconds: 1
+    condition:
+    condition : and
+    conditions:
+        - condition: state      
+          entity_id: input_select.alarm_cancel
+          state: 'Send Message'
+        - condition : or
+          conditions:
+            - condition: state      
+              entity_id: input_select.type1
+              state: 'Text'
+            - condition: state      
+              entity_id: input_select.type1
+              state: 'Both'
+    action:
+      - service: notify.medical_alert_sms
+        data_template:
+          message: >
+            {{ states('input_text.cancel_message')}}
+          target: >
+            +1{{ states('input_text.phone1')}}
 
+  - alias: Contact Cancel Voice 2
+    trigger:
+      platform: state
+      entity_id: automation.fast_buzzer
+      to: 'off'
+      for:
+        seconds: 2
+    condition:
+    condition : and
+    conditions:
+        - condition: state      
+          entity_id: input_select.alarm_cancel
+          state: 'Send Message'
+        - condition : or
+          conditions:
+            - condition: state      
+              entity_id: input_select.type2
+              state: 'Voice'
+            - condition: state      
+              entity_id: input_select.type2
+              state: 'Both'
+    action:
+      - service: notify.medical_alert_call
+        data_template:
+          message: >
+            {{ states('input_text.cancel_message')}}
+          target: >
+            +1{{ states('input_text.phone2')}}
+            
+  - alias: Contact Cancel Text 2
+    trigger:
+      platform: state
+      entity_id: automation.fast_buzzer
+      to: 'off'
+      for:
+        seconds: 2
+    condition:
+    condition : and
+    conditions:
+        - condition: state      
+          entity_id: input_select.alarm_cancel
+          state: 'Send Message'
+        - condition : or
+          conditions:
+            - condition: state      
+              entity_id: input_select.type2
+              state: 'Text'
+            - condition: state      
+              entity_id: input_select.type2
+              state: 'Both'
+    action:
+      - service: notify.medical_alert_sms
+        data_template:
+          message: >
+            {{ states('input_text.cancel_message')}}
+          target: >
+            +1{{ states('input_text.phone2')}}
+
+  - alias: Contact Cancel Voice 3
+    trigger:
+      platform: state
+      entity_id: automation.fast_buzzer
+      to: 'off'
+      for:
+        seconds: 3
+    condition:
+    condition : and
+    conditions:
+        - condition: state      
+          entity_id: input_select.alarm_cancel
+          state: 'Send Message'
+        - condition : or
+          conditions:
+            - condition: state      
+              entity_id: input_select.type3
+              state: 'Voice'
+            - condition: state      
+              entity_id: input_select.type3
+              state: 'Both'
+    action:
+      - service: notify.medical_alert_call
+        data_template:
+          message: >
+            {{ states('input_text.cancel_message')}}
+          target: >
+            +1{{ states('input_text.phone3')}}
+            
+  - alias: Contact Cancel Text 3
+    trigger:
+      platform: state
+      entity_id: automation.fast_buzzer
+      to: 'off'
+      for:
+        seconds: 3
+    condition:
+    condition : and
+    conditions:
+        - condition: state      
+          entity_id: input_select.alarm_cancel
+          state: 'Send Message'
+        - condition : or
+          conditions:
+            - condition: state      
+              entity_id: input_select.type3
+              state: 'Text'
+            - condition: state      
+              entity_id: input_select.type3
+              state: 'Both'
+    action:
+      - service: notify.medical_alert_sms
+        data_template:
+          message: >
+            {{ states('input_text.cancel_message')}}
+          target: >
+            +1{{ states('input_text.phone3')}}
+            
+  - alias: Contact Cancel Voice 4
+    trigger:
+      platform: state
+      entity_id: automation.fast_buzzer
+      to: 'off'
+      for:
+        seconds: 4
+    condition:
+    condition : and
+    conditions:
+        - condition: state      
+          entity_id: input_select.alarm_cancel
+          state: 'Send Message'
+        - condition : or
+          conditions:
+            - condition: state      
+              entity_id: input_select.type4
+              state: 'Voice'
+            - condition: state      
+              entity_id: input_select.type4
+              state: 'Both'
+    action:
+      - service: notify.medical_alert_call
+        data_template:
+          message: >
+            {{ states('input_text.cancel_message')}}
+          target: >
+            +1{{ states('input_text.phone4')}}
+            
+  - alias: Contact Cancel Text 4
+    trigger:
+      platform: state
+      entity_id: automation.fast_buzzer
+      to: 'off'
+      for:
+        seconds: 4
+    condition:
+    condition : and
+    conditions:
+        - condition: state      
+          entity_id: input_select.alarm_cancel
+          state: 'Send Message'
+        - condition : or
+          conditions:
+            - condition: state      
+              entity_id: input_select.type4
+              state: 'Text'
+            - condition: state      
+              entity_id: input_select.type4
+              state: 'Both'
+    action:
+      - service: notify.medical_alert_sms
+        data_template:
+          message: >
+            {{ states('input_text.cancel_message')}}
+          target: >
+            +1{{ states('input_text.phone4')}}
+                       
 script:        
-# Alarm timer is reset if red button pushed again
+# Alarm timer is reset if ON button pushed again
   alarm:
     alias: "Resetable Alarm"
     sequence:
@@ -213,52 +736,63 @@ script:
         data:
           entity_id: 
             - automation.fast_buzzer
-      - service: notify.ios_grahams_iphone
-        data:
-          message: "Medical Alarm Triggered"
-      - service: notify.medical_alert_call
-        data_template:
-          message: >
-            {{ states('input_text.help1')}}
-          target: >
-            +1{{ states('input_text.phone1')}}
-      - service: notify.medical_alert_sms
-        data_template:
-          message: >
-            {{ states('input_text.help1')}}
-          target: >
-            +1{{ states('input_text.phone2')}}       
-# I can add a condition to check for more phone number to send to
+
 
 group:
+  Alarm Status and Control:
+    entities:
+    - switch.alarm
+    - input_select.alarm_cancel
+    - input_text.cancel_message
+    
+  Contact 1:
+    entities:
+    - input_text.contact1
+    - input_text.phone1
+    - input_text.message1
+    - input_select.type1
+    
+  Contact 2:
+    entities:
+    - input_text.contact2
+    - input_text.phone2
+    - input_text.message2
+    - input_select.type2
+    
+  Contact 3:
+    entities:
+    - input_text.contact3
+    - input_text.phone3
+    - input_text.message3
+    - input_select.type3
+    
+  Contact 4:
+    entities:
+    - input_text.contact4
+    - input_text.phone4
+    - input_text.message4
+    - input_select.type4
+  
   default_view:
     view: True  
     icon: mdi:home
     entities:
-      - switch.alarm
-      - input_text.help1
-      - input_text.phone1
-      - input_text.phone2
+      - group.alarm_status_and_control
+      - group.contact_1
+      - group.contact_2
+      - group.contact_3
+      - group.contact_4 
 # Use a second tab for back end information not regularly accessed
   Back End:
     view: True
     entities:
-      - input_boolean.red
-      - input_boolean.black    
+      - binary_sensor.on_button
+      - binary_sensor.off_button    
       - switch.buzzer
       - script.alarm
       - script.alarm_timer
       - automation.slow_buzzer
       - automation.fast_buzzer     
 
-twilio:
-  account_sid: !secret account_sid
-  auth_token: !secret auth_token
-  
-notify:
-  - name: Medical Alert Call
-    platform: twilio_call
-    from_number: !secret from_number
-  - name: Medical Alert SMS
-    platform: twilio_sms
-    from_number: !secret from_number
+ 
+
