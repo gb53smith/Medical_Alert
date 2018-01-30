@@ -78,6 +78,14 @@ binary_sensor:
     ports:
       17: on_button
       18: off_button
+  - platform: template
+    sensors:
+      - alive:
+          friendly_name: "Alive Sensor"
+          value_template: 'off'
+      - alarm:
+          friendly_name: "Alarm"
+          value_template: 'off'
 
 # Alarm can be canceled by pressing the OFF button before the notify switch
 # is triggered after 30 seconds.  After notify i s triggered it can be
@@ -87,7 +95,6 @@ binary_sensor:
 switch:    
   - platform: rpi_gpio
     ports:
-      27: Alarm
       14: Buzzer
 
 #Note: Use input_text to enter phone numbers with a numeric check
@@ -170,6 +177,26 @@ input_text:
     pattern: '[0-9]*'
   message4:
     name: Help Message 4
+
+  alive contact:
+    name: Alive Contact  
+  phone_alive:
+    name: Phone Alive
+    min: 10
+    max: 10
+    pattern: '[0-9]*'
+  message_alive:
+    name: Alive Message
+ 
+input_boolean:
+  notity_enable:
+    name: Notify Enable
+
+input_datetime:
+  notify_time:
+    name: Notify Time
+    has_date: false
+    has_time: true    
     
 automation pre45:
   - alias: ON Button Pushed
@@ -184,7 +211,7 @@ automation pre45:
     action:
       service: homeassistant.turn_on
       entity_id: 
-        - switch.alarm
+        - binary_sensor.alarm
         - script.alarm
  
   - alias: OFF Button Pushed Before Notify
@@ -196,17 +223,28 @@ automation pre45:
       condition: and
       conditions:
         - condition: state
-          entity_id: 'binary_sensor.on_button'
+          entity_id: binary_sensor.on_button
           state: 'off'
         - condition: state      
-          entity_id: 'automation.fast_buzzer'
+          entity_id: automation.fast_buzzer
           state: 'off'            
     action:
-      service: homeassistant.turn_off
-      entity_id: 
-        - script.alarm
-        - script.alarm_timer
-        - switch.alarm
+      - service: homeassistant.turn_off
+        entity_id: 
+          - script.alarm
+          - script.alarm_timer
+          - binary_sensor.alarm
+      - service: homeassistant.turn_on
+        entity_id: 
+          - binary_sensor.alive
+      - service: switch.turn_on
+        entity_id: 
+          - switch.buzzer
+      - delay:
+          milliseconds: 3000
+      - service: switch.turn_off
+        entity_id: 
+          - switch.buzzer           
 
   - alias: OFF Button Pushed After Notify
     trigger:
@@ -229,7 +267,7 @@ automation pre45:
       entity_id: 
         - script.alarm
         - script.alarm_timer
-        - switch.alarm
+        - binary_sensor.alarm
         
   - alias: Slow Buzzer
     initial_state: false
@@ -268,7 +306,7 @@ automation pre45:
   - alias: Alarm OFF
     trigger:
       platform: state
-      entity_id: switch.alarm
+      entity_id: binary_sensor.alarm
       to: 'off'
     action:
       service: homeassistant.turn_off
@@ -286,7 +324,7 @@ automation pre45:
       for:
         seconds: 1
     condition:
-      condition : or
+      condition: or
       conditions:
         - condition: state      
           entity_id: input_select.type1
@@ -298,9 +336,9 @@ automation pre45:
       - service: notify.medical_alert_call
         data_template:
           message: >
-            {{ states('input_text.message1')}}
+            {{states('input_text.message1')}}
           target: >
-            +1{{ states('input_text.phone1')}}
+            +1{{states('input_text.phone1')}}
             
   - alias: Contact Text 1
     trigger:
@@ -310,7 +348,7 @@ automation pre45:
       for:
         seconds: 1
     condition:
-      condition : or
+      condition: or
       conditions:
         - condition: state      
           entity_id: input_select.type1
@@ -322,9 +360,9 @@ automation pre45:
       - service: notify.medical_alert_sms
         data_template:
           message: >
-            {{ states('input_text.message1')}}
+            {{states('input_text.message1')}}
           target: >
-            +1{{ states('input_text.phone1')}}
+            +1{{states('input_text.phone1')}}
 
   - alias: Contact Voice 2
     trigger:
@@ -334,7 +372,7 @@ automation pre45:
       for:
         seconds: 2
     condition:
-      condition : or
+      condition: or
       conditions:
         - condition: state      
           entity_id: input_select.type2
@@ -346,9 +384,9 @@ automation pre45:
       - service: notify.medical_alert_call
         data_template:
           message: >
-            {{ states('input_text.message2')}}
+            {{states('input_text.message2')}}
           target: >
-            +1{{ states('input_text.phone2')}}
+            +1{{states('input_text.phone2')}}
             
   - alias: Contact Text 2
     trigger:
@@ -358,7 +396,7 @@ automation pre45:
       for:
         seconds: 2
     condition:
-      condition : or
+      condition: or
       conditions:
         - condition: state      
           entity_id: input_select.type2
@@ -370,9 +408,9 @@ automation pre45:
       - service: notify.medical_alert_sms
         data_template:
           message: >
-            {{ states('input_text.message2')}}
+            {{states('input_text.message2')}}
           target: >
-            +1{{ states('input_text.phone2')}}
+            +1{{states('input_text.phone2')}}
             
   - alias: Contact Voice 3
     trigger:
@@ -382,7 +420,7 @@ automation pre45:
       for:
         seconds: 3
     condition:
-      condition : or
+      condition: or
       conditions:
         - condition: state      
           entity_id: input_select.type3
@@ -394,9 +432,9 @@ automation pre45:
       - service: notify.medical_alert_call
         data_template:
           message: >
-            {{ states('input_text.message3')}}
+            {{states('input_text.message3')}}
           target: >
-            +1{{ states('input_text.phone3')}}
+            +1{{states('input_text.phone3')}}
             
   - alias: Contact Text 3
     trigger:
@@ -406,7 +444,7 @@ automation pre45:
       for:
         seconds: 3
     condition:
-      condition : or
+      condition: or
       conditions:
         - condition: state      
           entity_id: input_select.type3
@@ -418,9 +456,9 @@ automation pre45:
       - service: notify.medical_alert_sms
         data_template:
           message: >
-            {{ states('input_text.message3')}}
+            {{states('input_text.message3')}}
           target: >
-            +1{{ states('input_text.phone3')}}
+            +1{{states('input_text.phone3')}}
             
   - alias: Contact Voice 4
     trigger:
@@ -430,7 +468,7 @@ automation pre45:
       for:
         seconds: 4
     condition:
-      condition : or
+      condition: or
       conditions:
         - condition: state      
           entity_id: input_select.type4
@@ -442,9 +480,9 @@ automation pre45:
       - service: notify.medical_alert_call
         data_template:
           message: >
-            {{ states('input_text.message4')}}
+            {{states('input_text.message4')}}
           target: >
-            +1{{ states('input_text.phone4')}}
+            +1{{states('input_text.phone4')}}
             
   - alias: Contact Text 4
     trigger:
@@ -454,7 +492,7 @@ automation pre45:
       for:
         seconds: 4
     condition:
-      condition : or
+      condition: or
       conditions:
         - condition: state      
           entity_id: input_select.type4
@@ -466,9 +504,9 @@ automation pre45:
       - service: notify.medical_alert_sms
         data_template:
           message: >
-            {{ states('input_text.message4')}}
+            {{states('input_text.message4')}}
           target: >
-            +1{{ states('input_text.phone4')}}
+            +1{{states('input_text.phone4')}}
            
   - alias: Contact Cancel Voice 1
     trigger:
@@ -478,12 +516,12 @@ automation pre45:
       for:
         seconds: 1
     condition:
-    condition : and
+    condition: and
     conditions:
         - condition: state      
           entity_id: input_select.alarm_cancel
           state: 'Send Message'
-        - condition : or
+        - condition: or
           conditions:
             - condition: state      
               entity_id: input_select.type1
@@ -495,9 +533,9 @@ automation pre45:
       - service: notify.medical_alert_call
         data_template:
           message: >
-            {{ states('input_text.cancel_message')}}
+            {{states('input_text.cancel_message')}}
           target: >
-            +1{{ states('input_text.phone1')}}
+            +1{{states('input_text.phone1')}}
             
   - alias: Contact Cancel Text 1
     trigger:
@@ -507,12 +545,12 @@ automation pre45:
       for:
         seconds: 1
     condition:
-    condition : and
+    condition: and
     conditions:
         - condition: state      
           entity_id: input_select.alarm_cancel
           state: 'Send Message'
-        - condition : or
+        - condition: or
           conditions:
             - condition: state      
               entity_id: input_select.type1
@@ -524,9 +562,9 @@ automation pre45:
       - service: notify.medical_alert_sms
         data_template:
           message: >
-            {{ states('input_text.cancel_message')}}
+            {{states('input_text.cancel_message')}}
           target: >
-            +1{{ states('input_text.phone1')}}
+            +1{{states('input_text.phone1')}}
 
   - alias: Contact Cancel Voice 2
     trigger:
@@ -536,12 +574,12 @@ automation pre45:
       for:
         seconds: 2
     condition:
-    condition : and
+    condition: and
     conditions:
         - condition: state      
           entity_id: input_select.alarm_cancel
           state: 'Send Message'
-        - condition : or
+        - condition: or
           conditions:
             - condition: state      
               entity_id: input_select.type2
@@ -553,9 +591,9 @@ automation pre45:
       - service: notify.medical_alert_call
         data_template:
           message: >
-            {{ states('input_text.cancel_message')}}
+            {{states('input_text.cancel_message')}}
           target: >
-            +1{{ states('input_text.phone2')}}
+            +1{{states('input_text.phone2')}}
             
   - alias: Contact Cancel Text 2
     trigger:
@@ -565,12 +603,12 @@ automation pre45:
       for:
         seconds: 2
     condition:
-    condition : and
+    condition: and
     conditions:
         - condition: state      
           entity_id: input_select.alarm_cancel
           state: 'Send Message'
-        - condition : or
+        - condition: or
           conditions:
             - condition: state      
               entity_id: input_select.type2
@@ -582,9 +620,9 @@ automation pre45:
       - service: notify.medical_alert_sms
         data_template:
           message: >
-            {{ states('input_text.cancel_message')}}
+            {{states('input_text.cancel_message')}}
           target: >
-            +1{{ states('input_text.phone2')}}
+            +1{{states('input_text.phone2')}}
 
   - alias: Contact Cancel Voice 3
     trigger:
@@ -594,12 +632,12 @@ automation pre45:
       for:
         seconds: 3
     condition:
-    condition : and
+    condition: and
     conditions:
         - condition: state      
           entity_id: input_select.alarm_cancel
           state: 'Send Message'
-        - condition : or
+        - condition: or
           conditions:
             - condition: state      
               entity_id: input_select.type3
@@ -611,9 +649,9 @@ automation pre45:
       - service: notify.medical_alert_call
         data_template:
           message: >
-            {{ states('input_text.cancel_message')}}
+            {{states('input_text.cancel_message')}}
           target: >
-            +1{{ states('input_text.phone3')}}
+            +1{{states('input_text.phone3')}}
             
   - alias: Contact Cancel Text 3
     trigger:
@@ -623,12 +661,12 @@ automation pre45:
       for:
         seconds: 3
     condition:
-    condition : and
+    condition: and
     conditions:
         - condition: state      
           entity_id: input_select.alarm_cancel
           state: 'Send Message'
-        - condition : or
+        - condition: or
           conditions:
             - condition: state      
               entity_id: input_select.type3
@@ -640,9 +678,9 @@ automation pre45:
       - service: notify.medical_alert_sms
         data_template:
           message: >
-            {{ states('input_text.cancel_message')}}
+            {{states('input_text.cancel_message')}}
           target: >
-            +1{{ states('input_text.phone3')}}
+            +1{{states('input_text.phone3')}}
             
   - alias: Contact Cancel Voice 4
     trigger:
@@ -652,12 +690,12 @@ automation pre45:
       for:
         seconds: 4
     condition:
-    condition : and
+    condition: and
     conditions:
         - condition: state      
           entity_id: input_select.alarm_cancel
           state: 'Send Message'
-        - condition : or
+        - condition: or
           conditions:
             - condition: state      
               entity_id: input_select.type4
@@ -669,9 +707,9 @@ automation pre45:
       - service: notify.medical_alert_call
         data_template:
           message: >
-            {{ states('input_text.cancel_message')}}
+            {{states('input_text.cancel_message')}}
           target: >
-            +1{{ states('input_text.phone4')}}
+            +1{{states('input_text.phone4')}}
             
   - alias: Contact Cancel Text 4
     trigger:
@@ -681,12 +719,12 @@ automation pre45:
       for:
         seconds: 4
     condition:
-    condition : and
+    condition: and
     conditions:
         - condition: state      
           entity_id: input_select.alarm_cancel
           state: 'Send Message'
-        - condition : or
+        - condition: or
           conditions:
             - condition: state      
               entity_id: input_select.type4
@@ -698,10 +736,38 @@ automation pre45:
       - service: notify.medical_alert_sms
         data_template:
           message: >
-            {{ states('input_text.cancel_message')}}
+            {{states('input_text.cancel_message')}}
           target: >
-            +1{{ states('input_text.phone4')}}
-                       
+            +1{{states('input_text.phone4')}}
+
+# User must turn ON  binary_sensor.alive once every
+# 24 hours to stop sending message_alive text
+  - alias: Alive Notify
+    trigger:
+      platform: time
+      at: >
+        {{states('input_datetime.notify_time')}}
+    condition:
+      condition: and
+      conditions:
+        - condition: state      
+          entity_id: binary_sensor.alive
+          state: 'off'
+        - condition: state      
+          entity_id: input_boolean.notity_enable
+          state: 'on'  
+    action:
+      - service: notify.medical_alert_sms
+        data_template:
+          message: >
+            {{states('input_text.message_alive')}}
+          target: >
+            +1{{states('input_text.phone_alive')}}
+      - service: homeassistant.turn_off
+        data:
+          entity_id: 
+            - binary_sensor.alive            
+            
 script:        
 # Alarm timer is reset if ON button pushed again
   alarm:
@@ -715,7 +781,7 @@ script:
       - service: homeassistant.turn_on
         data:
           entity_id:
-            - switch.alarm          
+            - binary_sensor.alarm          
             - script.alarm_timer 
 
   alarm_timer:
@@ -741,7 +807,7 @@ script:
 group:
   Alarm Status and Control:
     entities:
-    - switch.alarm
+    - binary_sensor.alarm
     - input_select.alarm_cancel
     - input_text.cancel_message
     
@@ -772,6 +838,14 @@ group:
     - input_text.phone4
     - input_text.message4
     - input_select.type4
+    
+  Alive Group:
+    entities:
+      - input_boolean.notity_enable
+      - input_datetime.notify_time
+      - input_text.alive_contact
+      - input_text.phone_alive
+      - input_text.message_alive
   
   default_view:
     view: True  
@@ -782,12 +856,19 @@ group:
       - group.contact_2
       - group.contact_3
       - group.contact_4 
-# Use a second tab for back end information not regularly accessed
+
+  Alive:
+    view: True
+    entities:
+      - group.alive_group    
+      
+# Use a third tab for back end information not regularly accessed
   Back End:
     view: True
     entities:
       - binary_sensor.on_button
-      - binary_sensor.off_button    
+      - binary_sensor.off_button
+      - binary_sensor.alive
       - switch.buzzer
       - script.alarm
       - script.alarm_timer
