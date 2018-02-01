@@ -22,6 +22,12 @@ http:
   ssl_key: /ssl/privkey.pem
   base_url: !secret base_url
 
+panel_iframe:
+  configurator:
+    title: Configurator
+    icon: mdi:wrench
+    url: !secret config_url
+
 twilio:
   account_sid: !secret account_sid
   auth_token: !secret auth_token
@@ -56,10 +62,22 @@ logbook:
 recorder:
   purge_interval: 5
   purge_keep_days: 7
+  exclude:
+    entities:
+      - sensor.time
 
 # Enables support for tracking state changes over time.
 # Exclude those domains and entities that do not change much 
 history:
+  exclude:
+    domains:
+      - automation
+      - script
+      - group
+      - input_select
+      - input_text
+    entities:
+      - sensor.time
 
 ########## HARDWARE CONNECTIONS #############
 # Connect RX480R_4CH module pins to Raspberry PI I/O Pins
@@ -805,9 +823,8 @@ script:
 
 
 group:
-  Alarm Status and Control:
+  Alarm Cancel:
     entities:
-    - switch.alarm
     - input_select.alarm_cancel
     - input_text.cancel_message
     
@@ -853,7 +870,7 @@ group:
     view: True  
     icon: mdi:home
     entities:
-      - group.alarm_status_and_control
+      - group.alarm_cancel
       - group.contact_1
       - group.contact_2
       - group.contact_3
