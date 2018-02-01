@@ -61,8 +61,6 @@ recorder:
 # Exclude those domains and entities that do not change much 
 history:
 
-#Send notifications to the iOS app on my iPhone
-ios:
 ########## HARDWARE CONNECTIONS #############
 # Connect RX480R_4CH module pins to Raspberry PI I/O Pins
 #  RX480R_4CH  -> Raspberry PI
@@ -78,58 +76,61 @@ binary_sensor:
     ports:
       17: on_button
       18: off_button
-  - platform: template
-    sensors:
-      - alive:
-          friendly_name: "Alive Sensor"
-          value_template: 'off'
-      - alarm:
-          friendly_name: "Alarm"
-          value_template: 'off'
 
 # Alarm can be canceled by pressing the OFF button before the notify switch
 # is triggered after 30 seconds.  After notify i s triggered it can be
 # canceled by pressing BOTH ON and OFF buttons for 5 seconds or
 # Manually sliding the alarm switch OFF from a Web Browser
-
+# On buzzer is a physical connection
+# on_sw and off_sw is for testing only
+# alarm and alive are to store states and have no hardware connections
 switch:    
   - platform: rpi_gpio
     ports:
       14: Buzzer
-
+      22: on_sw
+      23: off_sw
+      5: alarm
+      6: alive
+      
+# Used to create time trigger on input_datetime
+sensor:
+ - platform: time_date
+   display_options:
+     - 'time'
 #Note: Use input_text to enter phone numbers with a numeric check
 
 input_select: 
   alarm_cancel:
     name: Alarm Cancel Options
     options:
-      - OFF
+      - 'OFF'
       - Send Message
   type1:
     name: Type 1
     options:
-      - OFF
+      - 'OFF'
       - Voice
       - Text
       - Both
   type2:
     name: Type 2
     options:
-      - OFF
+      - 'OFF'
       - Voice
       - Text
       - Both      
   type3:
     name: Type 3
     options:
-      - OFF
+      - 'OFF'
       - Voice
       - Text
       - Both      
   type4:
     name: Type 4
     options:
-      - OFF
+      - 'OFF'
       - Voice
       - Text
       - Both      
@@ -137,7 +138,7 @@ input_select:
 input_text:
   cancel_message:
     name: Cancel Message
-#
+    
   contact1:
     name: Contact Name 1  
   phone1:
@@ -147,7 +148,7 @@ input_text:
     pattern: '[0-9]*'
   message1:
     name: Help Message 1 
-#    
+    
   contact2:
     name: Contact Name 2  
   phone2:
@@ -157,7 +158,7 @@ input_text:
     pattern: '[0-9]*'
   message2:
     name: Help Message 2
-#    
+    
   contact3:
     name: Contact Name 3  
   phone3:
@@ -167,7 +168,7 @@ input_text:
     pattern: '[0-9]*'
   message3:
     name: Help Message 3
-#    
+    
   contact4:
     name: Contact Name 4  
   phone4:
@@ -178,7 +179,7 @@ input_text:
   message4:
     name: Help Message 4
 
-  alive contact:
+  alive_contact:
     name: Alive Contact  
   phone_alive:
     name: Phone Alive
@@ -211,7 +212,7 @@ automation pre45:
     action:
       service: homeassistant.turn_on
       entity_id: 
-        - binary_sensor.alarm
+        - switch.alarm
         - script.alarm
  
   - alias: OFF Button Pushed Before Notify
@@ -233,10 +234,10 @@ automation pre45:
         entity_id: 
           - script.alarm
           - script.alarm_timer
-          - binary_sensor.alarm
+          - switch.alarm
       - service: homeassistant.turn_on
         entity_id: 
-          - binary_sensor.alive
+          - switch.alive
       - service: switch.turn_on
         entity_id: 
           - switch.buzzer
@@ -267,7 +268,7 @@ automation pre45:
       entity_id: 
         - script.alarm
         - script.alarm_timer
-        - binary_sensor.alarm
+        - switch.alarm
         
   - alias: Slow Buzzer
     initial_state: false
@@ -306,7 +307,7 @@ automation pre45:
   - alias: Alarm OFF
     trigger:
       platform: state
-      entity_id: binary_sensor.alarm
+      entity_id: switch.alarm
       to: 'off'
     action:
       service: homeassistant.turn_off
@@ -516,19 +517,19 @@ automation pre45:
       for:
         seconds: 1
     condition:
-    condition: and
-    conditions:
-        - condition: state      
-          entity_id: input_select.alarm_cancel
-          state: 'Send Message'
-        - condition: or
-          conditions:
-            - condition: state      
-              entity_id: input_select.type1
-              state: 'Voice'
-            - condition: state      
-              entity_id: input_select.type1
-              state: 'Both'
+      condition: and
+      conditions:
+          - condition: state      
+            entity_id: input_select.alarm_cancel
+            state: 'Send Message'
+          - condition: or
+            conditions:
+              - condition: state      
+                entity_id: input_select.type1
+                state: 'Voice'
+              - condition: state      
+                entity_id: input_select.type1
+                state: 'Both'
     action:
       - service: notify.medical_alert_call
         data_template:
@@ -545,19 +546,19 @@ automation pre45:
       for:
         seconds: 1
     condition:
-    condition: and
-    conditions:
-        - condition: state      
-          entity_id: input_select.alarm_cancel
-          state: 'Send Message'
-        - condition: or
-          conditions:
-            - condition: state      
-              entity_id: input_select.type1
-              state: 'Text'
-            - condition: state      
-              entity_id: input_select.type1
-              state: 'Both'
+      condition: and
+      conditions:
+          - condition: state      
+            entity_id: input_select.alarm_cancel
+            state: 'Send Message'
+          - condition: or
+            conditions:
+              - condition: state      
+                entity_id: input_select.type1
+                state: 'Text'
+              - condition: state      
+                entity_id: input_select.type1
+                state: 'Both'
     action:
       - service: notify.medical_alert_sms
         data_template:
@@ -574,19 +575,19 @@ automation pre45:
       for:
         seconds: 2
     condition:
-    condition: and
-    conditions:
-        - condition: state      
-          entity_id: input_select.alarm_cancel
-          state: 'Send Message'
-        - condition: or
-          conditions:
-            - condition: state      
-              entity_id: input_select.type2
-              state: 'Voice'
-            - condition: state      
-              entity_id: input_select.type2
-              state: 'Both'
+      condition: and
+      conditions:
+          - condition: state      
+            entity_id: input_select.alarm_cancel
+            state: 'Send Message'
+          - condition: or
+            conditions:
+              - condition: state      
+                entity_id: input_select.type2
+                state: 'Voice'
+              - condition: state      
+                entity_id: input_select.type2
+                state: 'Both'
     action:
       - service: notify.medical_alert_call
         data_template:
@@ -603,19 +604,19 @@ automation pre45:
       for:
         seconds: 2
     condition:
-    condition: and
-    conditions:
-        - condition: state      
-          entity_id: input_select.alarm_cancel
-          state: 'Send Message'
-        - condition: or
-          conditions:
-            - condition: state      
-              entity_id: input_select.type2
-              state: 'Text'
-            - condition: state      
-              entity_id: input_select.type2
-              state: 'Both'
+      condition: and
+      conditions:
+          - condition: state      
+            entity_id: input_select.alarm_cancel
+            state: 'Send Message'
+          - condition: or
+            conditions:
+              - condition: state      
+                entity_id: input_select.type2
+                state: 'Text'
+              - condition: state      
+                entity_id: input_select.type2
+                state: 'Both'
     action:
       - service: notify.medical_alert_sms
         data_template:
@@ -632,19 +633,19 @@ automation pre45:
       for:
         seconds: 3
     condition:
-    condition: and
-    conditions:
-        - condition: state      
-          entity_id: input_select.alarm_cancel
-          state: 'Send Message'
-        - condition: or
-          conditions:
-            - condition: state      
-              entity_id: input_select.type3
-              state: 'Voice'
-            - condition: state      
-              entity_id: input_select.type3
-              state: 'Both'
+      condition: and
+      conditions:
+          - condition: state      
+            entity_id: input_select.alarm_cancel
+            state: 'Send Message'
+          - condition: or
+            conditions:
+              - condition: state      
+                entity_id: input_select.type3
+                state: 'Voice'
+              - condition: state      
+                entity_id: input_select.type3
+                state: 'Both'
     action:
       - service: notify.medical_alert_call
         data_template:
@@ -661,19 +662,19 @@ automation pre45:
       for:
         seconds: 3
     condition:
-    condition: and
-    conditions:
-        - condition: state      
-          entity_id: input_select.alarm_cancel
-          state: 'Send Message'
-        - condition: or
-          conditions:
-            - condition: state      
-              entity_id: input_select.type3
-              state: 'Text'
-            - condition: state      
-              entity_id: input_select.type3
-              state: 'Both'
+      condition: and
+      conditions:
+          - condition: state      
+            entity_id: input_select.alarm_cancel
+            state: 'Send Message'
+          - condition: or
+            conditions:
+              - condition: state      
+                entity_id: input_select.type3
+                state: 'Text'
+              - condition: state      
+                entity_id: input_select.type3
+                state: 'Both'
     action:
       - service: notify.medical_alert_sms
         data_template:
@@ -690,19 +691,19 @@ automation pre45:
       for:
         seconds: 4
     condition:
-    condition: and
-    conditions:
-        - condition: state      
-          entity_id: input_select.alarm_cancel
-          state: 'Send Message'
-        - condition: or
-          conditions:
-            - condition: state      
-              entity_id: input_select.type4
-              state: 'Voice'
-            - condition: state      
-              entity_id: input_select.type4
-              state: 'Both'
+      condition: and
+      conditions:
+          - condition: state      
+            entity_id: input_select.alarm_cancel
+            state: 'Send Message'
+          - condition: or
+            conditions:
+              - condition: state      
+                entity_id: input_select.type4
+                state: 'Voice'
+              - condition: state      
+                entity_id: input_select.type4
+                state: 'Both'
     action:
       - service: notify.medical_alert_call
         data_template:
@@ -719,19 +720,19 @@ automation pre45:
       for:
         seconds: 4
     condition:
-    condition: and
-    conditions:
-        - condition: state      
-          entity_id: input_select.alarm_cancel
-          state: 'Send Message'
-        - condition: or
-          conditions:
-            - condition: state      
-              entity_id: input_select.type4
-              state: 'Text'
-            - condition: state      
-              entity_id: input_select.type4
-              state: 'Both'
+      condition: and
+      conditions:
+          - condition: state      
+            entity_id: input_select.alarm_cancel
+            state: 'Send Message'
+          - condition: or
+            conditions:
+              - condition: state      
+                entity_id: input_select.type4
+                state: 'Text'
+              - condition: state      
+                entity_id: input_select.type4
+                state: 'Both'
     action:
       - service: notify.medical_alert_sms
         data_template:
@@ -740,18 +741,17 @@ automation pre45:
           target: >
             +1{{states('input_text.phone4')}}
 
-# User must turn ON  binary_sensor.alive once every
+# User must turn ON  switch.alive once every
 # 24 hours to stop sending message_alive text
   - alias: Alive Notify
     trigger:
-      platform: time
-      at: >
-        {{states('input_datetime.notify_time')}}
+      platform: template
+      value_template: '{{ (states.input_datetime.notify_time.attributes.timestamp | int | timestamp_custom("%H:%M", False)) == states.sensor.time.state}}'
     condition:
       condition: and
       conditions:
         - condition: state      
-          entity_id: binary_sensor.alive
+          entity_id: switch.alive
           state: 'off'
         - condition: state      
           entity_id: input_boolean.notity_enable
@@ -766,7 +766,7 @@ automation pre45:
       - service: homeassistant.turn_off
         data:
           entity_id: 
-            - binary_sensor.alive            
+            - switch.alive            
             
 script:        
 # Alarm timer is reset if ON button pushed again
@@ -781,7 +781,7 @@ script:
       - service: homeassistant.turn_on
         data:
           entity_id:
-            - binary_sensor.alarm          
+            - switch.alarm          
             - script.alarm_timer 
 
   alarm_timer:
@@ -807,7 +807,7 @@ script:
 group:
   Alarm Status and Control:
     entities:
-    - binary_sensor.alarm
+    - switch.alarm
     - input_select.alarm_cancel
     - input_text.cancel_message
     
@@ -840,8 +840,10 @@ group:
     - input_select.type4
     
   Alive Group:
+    control: hidden
     entities:
       - input_boolean.notity_enable
+      - switch.alive
       - input_datetime.notify_time
       - input_text.alive_contact
       - input_text.phone_alive
@@ -866,14 +868,24 @@ group:
   Back End:
     view: True
     entities:
+      - switch.on_sw
+      - switch.off_sw
       - binary_sensor.on_button
       - binary_sensor.off_button
-      - binary_sensor.alive
+      - switch.alarm
+      - switch.alive
       - switch.buzzer
       - script.alarm
       - script.alarm_timer
       - automation.slow_buzzer
       - automation.fast_buzzer     
+      - automation.on_button_pushed
+      - automation.off_button_pushed_before_notify
+      - automation.off_button_pushed_after_notify
+      - automation.alarm_off
+      - automation.alive_notify
+      - automation.contact_text_1
+      - automation.contact_voice_1
 
  
 
