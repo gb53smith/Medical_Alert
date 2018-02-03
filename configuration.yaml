@@ -781,6 +781,13 @@ automation pre45:
             {{states('input_text.message_alive')}}
           target: >
             +1{{states('input_text.phone_alive')}}
+            
+  - alias: Alive Reset
+    trigger:
+      platform: template
+      value_template: '{{ (states.input_datetime.notify_time.attributes.timestamp | int | timestamp_custom("%H:%M", False)) == states.sensor.time.state}}'
+    action:            
+      - delay: 00:00:01            
       - service: homeassistant.turn_off
         data:
           entity_id: 
@@ -867,21 +874,25 @@ group:
       - input_text.message_alive
   
   default_view:
-    view: True  
-    icon: mdi:home
+    view: True
+    name: Contacts    
     entities:
-      - group.alarm_cancel
       - group.contact_1
       - group.contact_2
       - group.contact_3
-      - group.contact_4 
-
+      - group.contact_4
+      
+  Cancel:      
+    view: True
+    entities:
+      - group.alarm_cancel
+      
   Alive:
     view: True
     entities:
       - group.alive_group    
       
-# Use a third tab for back end information not regularly accessed
+# Use a last tab for back end information not regularly accessed
   Back End:
     view: True
     entities:
@@ -892,17 +903,17 @@ group:
       - switch.alarm
       - switch.alive
       - switch.buzzer
-      - script.alarm
-      - script.alarm_timer
+      # - script.alarm
+      # - script.alarm_timer
       - automation.slow_buzzer
       - automation.fast_buzzer     
-      - automation.on_button_pushed
-      - automation.off_button_pushed_before_notify
-      - automation.off_button_pushed_after_notify
-      - automation.alarm_off
-      - automation.alive_notify
-      - automation.contact_text_1
-      - automation.contact_voice_1
+      # - automation.on_button_pushed
+      # - automation.off_button_pushed_before_notify
+      # - automation.off_button_pushed_after_notify
+      # - automation.alarm_off
+      # - automation.alive_notify
+      # - automation.contact_text_1
+      # - automation.contact_voice_1
 
  
 
