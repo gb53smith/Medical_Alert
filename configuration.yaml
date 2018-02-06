@@ -39,6 +39,8 @@ notify:
   - name: Medical Alert SMS
     platform: twilio_sms
     from_number: !secret from_number
+
+python_script:
     
 # Enables the front end
 frontend:
@@ -52,8 +54,15 @@ config:
 updater:
 
 # Discover some devices automatically
-discovery:
+#discovery:
 
+#Need this only to debug python scripts
+# logger:
+  # default: info
+  # logs:
+    # homeassistant.components.python_scripts: debug
+    # homeassistant.components.sensor.time: error
+    
 # View all events in a logbook
 logbook:
 
@@ -165,7 +174,8 @@ input_text:
     max: 10
     pattern: '[0-9]*'
   message1:
-    name: Help Message 1 
+    name: Help Message 1
+    max: 500    
     
   contact2:
     name: Contact Name 2  
@@ -352,12 +362,14 @@ automation pre45:
           entity_id: input_select.type1
           state: 'Both'
     action:
-      - service: notify.medical_alert_call
-        data_template:
-          message: >
-            {{states('input_text.message1')}}
-          target: >
-            +1{{states('input_text.phone1')}}
+      - service: python_script.my_twilio_call
+        data:
+          caller: '1' 
+          delay: !secret delay
+          loop: !secret loop
+          voice: !secret voice
+          language: !secret language
+          speed: !secret speed
             
   - alias: Contact Text 1
     trigger:
@@ -400,12 +412,14 @@ automation pre45:
           entity_id: input_select.type2
           state: 'Both'
     action:
-      - service: notify.medical_alert_call
-        data_template:
-          message: >
-            {{states('input_text.message2')}}
-          target: >
-            +1{{states('input_text.phone2')}}
+      - service: python_script.my_twilio_call
+        data:
+          caller: '2' 
+          delay: !secret delay
+          loop: !secret loop
+          voice: !secret voice
+          language: !secret language
+          speed: !secret speed
             
   - alias: Contact Text 2
     trigger:
@@ -448,12 +462,14 @@ automation pre45:
           entity_id: input_select.type3
           state: 'Both'
     action:
-      - service: notify.medical_alert_call
-        data_template:
-          message: >
-            {{states('input_text.message3')}}
-          target: >
-            +1{{states('input_text.phone3')}}
+      - service: python_script.my_twilio_call
+        data:
+          caller: '3' 
+          delay: !secret delay
+          loop: !secret loop
+          voice: !secret voice
+          language: !secret language
+          speed: !secret speed
             
   - alias: Contact Text 3
     trigger:
@@ -496,12 +512,14 @@ automation pre45:
           entity_id: input_select.type4
           state: 'Both'
     action:
-      - service: notify.medical_alert_call
-        data_template:
-          message: >
-            {{states('input_text.message4')}}
-          target: >
-            +1{{states('input_text.phone4')}}
+      - service: python_script.my_twilio_call
+        data:
+          caller: '4' 
+          delay: !secret delay
+          loop: !secret loop
+          voice: !secret voice
+          language: !secret language
+          speed: !secret speed
             
   - alias: Contact Text 4
     trigger:
