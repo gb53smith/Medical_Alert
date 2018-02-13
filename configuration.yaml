@@ -109,7 +109,8 @@ binary_sensor:
 # canceled by pressing BOTH ON and OFF buttons for 5 seconds or
 # Manually sliding the alarm switch OFF from a Web Browser
 # On buzzer is a physical connection
-# on_sw and off_sw is for testing only
+# on_sw and off_sw is for testing 
+# connect 15 -> 11, 16 -> 12 for testing
 # alarm and alive are to store states and have no hardware connections
 switch:    
   - platform: rpi_gpio
@@ -122,9 +123,15 @@ switch:
       
 # Used to create time trigger on input_datetime
 sensor:
- - platform: time_date
-   display_options:
-     - 'time'
+  - platform: time_date
+    display_options:
+      - 'time'
+  - platform: command_line
+    name: CPU Temperature
+    unit_of_measurement: "°C"
+    scan_interval: 300
+    command: "python3 /config/cputemp.py"
+    
 #Note: Use input_text to enter phone numbers with a numeric check
 
 input_select: 
@@ -344,438 +351,24 @@ automation pre45:
         - automation.slow_buzzer
         - automation.fast_buzzer
 
-       
-  - alias: Contact Voice 1
+  - alias: Contact
     trigger:
-      platform: state
-      entity_id: automation.fast_buzzer
-      to: 'on'
-      for:
-        seconds: 1
-    condition:
-      condition: or
-      conditions:
-        - condition: state      
-          entity_id: input_select.type1
-          state: 'Voice'
-        - condition: state      
-          entity_id: input_select.type1
-          state: 'Both'
+      - platform: state
+        entity_id: automation.fast_buzzer
+        to: 'on'
+      - platform: state
+        entity_id: automation.fast_buzzer
+        to: 'off'      
     action:
-      - service: python_script.my_twilio_call
+      - service: python_script.twilio
         data:
-          caller: '1' 
+          contacts: '4'
           delay: !secret delay
           loop: !secret loop
           voice: !secret voice
           language: !secret language
-          speed: !secret speed
-            
-  - alias: Contact Text 1
-    trigger:
-      platform: state
-      entity_id: automation.fast_buzzer
-      to: 'on'
-      for:
-        seconds: 1
-    condition:
-      condition: or
-      conditions:
-        - condition: state      
-          entity_id: input_select.type1
-          state: 'Text'
-        - condition: state      
-          entity_id: input_select.type1
-          state: 'Both'
-    action:
-      - service: notify.medical_alert_sms
-        data_template:
-          message: >
-            {{states('input_text.message1')}}
-          target: >
-            +1{{states('input_text.phone1')}}
-
-  - alias: Contact Voice 2
-    trigger:
-      platform: state
-      entity_id: automation.fast_buzzer
-      to: 'on'
-      for:
-        seconds: 2
-    condition:
-      condition: or
-      conditions:
-        - condition: state      
-          entity_id: input_select.type2
-          state: 'Voice'
-        - condition: state      
-          entity_id: input_select.type2
-          state: 'Both'
-    action:
-      - service: python_script.my_twilio_call
-        data:
-          caller: '2' 
-          delay: !secret delay
-          loop: !secret loop
-          voice: !secret voice
-          language: !secret language
-          speed: !secret speed
-            
-  - alias: Contact Text 2
-    trigger:
-      platform: state
-      entity_id: automation.fast_buzzer
-      to: 'on'
-      for:
-        seconds: 2
-    condition:
-      condition: or
-      conditions:
-        - condition: state      
-          entity_id: input_select.type2
-          state: 'Text'
-        - condition: state      
-          entity_id: input_select.type2
-          state: 'Both'
-    action:
-      - service: notify.medical_alert_sms
-        data_template:
-          message: >
-            {{states('input_text.message2')}}
-          target: >
-            +1{{states('input_text.phone2')}}
-            
-  - alias: Contact Voice 3
-    trigger:
-      platform: state
-      entity_id: automation.fast_buzzer
-      to: 'on'
-      for:
-        seconds: 3
-    condition:
-      condition: or
-      conditions:
-        - condition: state      
-          entity_id: input_select.type3
-          state: 'Voice'
-        - condition: state      
-          entity_id: input_select.type3
-          state: 'Both'
-    action:
-      - service: python_script.my_twilio_call
-        data:
-          caller: '3' 
-          delay: !secret delay
-          loop: !secret loop
-          voice: !secret voice
-          language: !secret language
-          speed: !secret speed
-            
-  - alias: Contact Text 3
-    trigger:
-      platform: state
-      entity_id: automation.fast_buzzer
-      to: 'on'
-      for:
-        seconds: 3
-    condition:
-      condition: or
-      conditions:
-        - condition: state      
-          entity_id: input_select.type3
-          state: 'Text'
-        - condition: state      
-          entity_id: input_select.type3
-          state: 'Both'
-    action:
-      - service: notify.medical_alert_sms
-        data_template:
-          message: >
-            {{states('input_text.message3')}}
-          target: >
-            +1{{states('input_text.phone3')}}
-            
-  - alias: Contact Voice 4
-    trigger:
-      platform: state
-      entity_id: automation.fast_buzzer
-      to: 'on'
-      for:
-        seconds: 4
-    condition:
-      condition: or
-      conditions:
-        - condition: state      
-          entity_id: input_select.type4
-          state: 'Voice'
-        - condition: state      
-          entity_id: input_select.type4
-          state: 'Both'
-    action:
-      - service: python_script.my_twilio_call
-        data:
-          caller: '4' 
-          delay: !secret delay
-          loop: !secret loop
-          voice: !secret voice
-          language: !secret language
-          speed: !secret speed
-            
-  - alias: Contact Text 4
-    trigger:
-      platform: state
-      entity_id: automation.fast_buzzer
-      to: 'on'
-      for:
-        seconds: 4
-    condition:
-      condition: or
-      conditions:
-        - condition: state      
-          entity_id: input_select.type4
-          state: 'Text'
-        - condition: state      
-          entity_id: input_select.type4
-          state: 'Both'
-    action:
-      - service: notify.medical_alert_sms
-        data_template:
-          message: >
-            {{states('input_text.message4')}}
-          target: >
-            +1{{states('input_text.phone4')}}
-           
-  - alias: Contact Cancel Voice 1
-    trigger:
-      platform: state
-      entity_id: automation.fast_buzzer
-      to: 'off'
-      for:
-        seconds: 1
-    condition:
-      condition: and
-      conditions:
-          - condition: state      
-            entity_id: input_select.alarm_cancel
-            state: 'Send Message'
-          - condition: or
-            conditions:
-              - condition: state      
-                entity_id: input_select.type1
-                state: 'Voice'
-              - condition: state      
-                entity_id: input_select.type1
-                state: 'Both'
-    action:
-      - service: notify.medical_alert_call
-        data_template:
-          message: >
-            {{states('input_text.cancel_message')}}
-          target: >
-            +1{{states('input_text.phone1')}}
-            
-  - alias: Contact Cancel Text 1
-    trigger:
-      platform: state
-      entity_id: automation.fast_buzzer
-      to: 'off'
-      for:
-        seconds: 1
-    condition:
-      condition: and
-      conditions:
-          - condition: state      
-            entity_id: input_select.alarm_cancel
-            state: 'Send Message'
-          - condition: or
-            conditions:
-              - condition: state      
-                entity_id: input_select.type1
-                state: 'Text'
-              - condition: state      
-                entity_id: input_select.type1
-                state: 'Both'
-    action:
-      - service: notify.medical_alert_sms
-        data_template:
-          message: >
-            {{states('input_text.cancel_message')}}
-          target: >
-            +1{{states('input_text.phone1')}}
-
-  - alias: Contact Cancel Voice 2
-    trigger:
-      platform: state
-      entity_id: automation.fast_buzzer
-      to: 'off'
-      for:
-        seconds: 2
-    condition:
-      condition: and
-      conditions:
-          - condition: state      
-            entity_id: input_select.alarm_cancel
-            state: 'Send Message'
-          - condition: or
-            conditions:
-              - condition: state      
-                entity_id: input_select.type2
-                state: 'Voice'
-              - condition: state      
-                entity_id: input_select.type2
-                state: 'Both'
-    action:
-      - service: notify.medical_alert_call
-        data_template:
-          message: >
-            {{states('input_text.cancel_message')}}
-          target: >
-            +1{{states('input_text.phone2')}}
-            
-  - alias: Contact Cancel Text 2
-    trigger:
-      platform: state
-      entity_id: automation.fast_buzzer
-      to: 'off'
-      for:
-        seconds: 2
-    condition:
-      condition: and
-      conditions:
-          - condition: state      
-            entity_id: input_select.alarm_cancel
-            state: 'Send Message'
-          - condition: or
-            conditions:
-              - condition: state      
-                entity_id: input_select.type2
-                state: 'Text'
-              - condition: state      
-                entity_id: input_select.type2
-                state: 'Both'
-    action:
-      - service: notify.medical_alert_sms
-        data_template:
-          message: >
-            {{states('input_text.cancel_message')}}
-          target: >
-            +1{{states('input_text.phone2')}}
-
-  - alias: Contact Cancel Voice 3
-    trigger:
-      platform: state
-      entity_id: automation.fast_buzzer
-      to: 'off'
-      for:
-        seconds: 3
-    condition:
-      condition: and
-      conditions:
-          - condition: state      
-            entity_id: input_select.alarm_cancel
-            state: 'Send Message'
-          - condition: or
-            conditions:
-              - condition: state      
-                entity_id: input_select.type3
-                state: 'Voice'
-              - condition: state      
-                entity_id: input_select.type3
-                state: 'Both'
-    action:
-      - service: notify.medical_alert_call
-        data_template:
-          message: >
-            {{states('input_text.cancel_message')}}
-          target: >
-            +1{{states('input_text.phone3')}}
-            
-  - alias: Contact Cancel Text 3
-    trigger:
-      platform: state
-      entity_id: automation.fast_buzzer
-      to: 'off'
-      for:
-        seconds: 3
-    condition:
-      condition: and
-      conditions:
-          - condition: state      
-            entity_id: input_select.alarm_cancel
-            state: 'Send Message'
-          - condition: or
-            conditions:
-              - condition: state      
-                entity_id: input_select.type3
-                state: 'Text'
-              - condition: state      
-                entity_id: input_select.type3
-                state: 'Both'
-    action:
-      - service: notify.medical_alert_sms
-        data_template:
-          message: >
-            {{states('input_text.cancel_message')}}
-          target: >
-            +1{{states('input_text.phone3')}}
-            
-  - alias: Contact Cancel Voice 4
-    trigger:
-      platform: state
-      entity_id: automation.fast_buzzer
-      to: 'off'
-      for:
-        seconds: 4
-    condition:
-      condition: and
-      conditions:
-          - condition: state      
-            entity_id: input_select.alarm_cancel
-            state: 'Send Message'
-          - condition: or
-            conditions:
-              - condition: state      
-                entity_id: input_select.type4
-                state: 'Voice'
-              - condition: state      
-                entity_id: input_select.type4
-                state: 'Both'
-    action:
-      - service: notify.medical_alert_call
-        data_template:
-          message: >
-            {{states('input_text.cancel_message')}}
-          target: >
-            +1{{states('input_text.phone4')}}
-            
-  - alias: Contact Cancel Text 4
-    trigger:
-      platform: state
-      entity_id: automation.fast_buzzer
-      to: 'off'
-      for:
-        seconds: 4
-    condition:
-      condition: and
-      conditions:
-          - condition: state      
-            entity_id: input_select.alarm_cancel
-            state: 'Send Message'
-          - condition: or
-            conditions:
-              - condition: state      
-                entity_id: input_select.type4
-                state: 'Text'
-              - condition: state      
-                entity_id: input_select.type4
-                state: 'Both'
-    action:
-      - service: notify.medical_alert_sms
-        data_template:
-          message: >
-            {{states('input_text.cancel_message')}}
-          target: >
-            +1{{states('input_text.phone4')}}
+          speed: !secret speed        
+        
 
 # User must turn ON  switch.alive once every
 # 24 hours to stop sending message_alive text
@@ -845,7 +438,6 @@ script:
         data:
           entity_id: 
             - automation.fast_buzzer
-
 
 group:
   Alarm Cancel:
@@ -921,17 +513,10 @@ group:
       - switch.alarm
       - switch.alive
       - switch.buzzer
-      # - script.alarm
-      # - script.alarm_timer
       - automation.slow_buzzer
-      - automation.fast_buzzer     
-      # - automation.on_button_pushed
-      # - automation.off_button_pushed_before_notify
-      # - automation.off_button_pushed_after_notify
-      # - automation.alarm_off
-      # - automation.alive_notify
-      # - automation.contact_text_1
-      # - automation.contact_voice_1
+      - automation.fast_buzzer
+      - sensor.cpu_temperature      
+
 
  
 

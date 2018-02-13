@@ -1,4 +1,6 @@
 #For Homeassistant
 secrets.yaml
+*.pdf
+
 
 
