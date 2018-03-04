@@ -15,6 +15,8 @@ homeassistant:
   # Pick yours from here: http://en.wikipedia.org/wiki/List_of_tz_database_time_zones
   time_zone: !secret time_zone
 
+#Needed in place of discovery to get hassio menu
+hassio:
 
 http:
   api_password: !secret api_password
@@ -41,11 +43,10 @@ notify:
     from_number: !secret from_number
 
 python_script:
-    
+
 # Enables the front end
 frontend:
   javascript_version: es5
-
 
 # Enables configuration UI
 config:
@@ -62,7 +63,7 @@ updater:
   # logs:
     # homeassistant.components.python_scripts: debug
     # homeassistant.components.sensor.time: error
-    
+
 # View all events in a logbook
 logbook:
 
@@ -120,7 +121,7 @@ switch:
       23: off_sw
       5: alarm
       6: alive
-      
+
 # Used to create time trigger on input_datetime
 sensor:
   - platform: time_date
@@ -131,7 +132,7 @@ sensor:
     unit_of_measurement: "°C"
     scan_interval: 300
     command: "python3 /config/cputemp.py"
-    
+
 #Note: Use input_text to enter phone numbers with a numeric check
 
 input_select: 
@@ -168,11 +169,11 @@ input_select:
       - Voice
       - Text
       - Both      
-      
+
 input_text:
   cancel_message:
     name: Cancel Message
-    
+
   contact1:
     name: Contact Name 1  
   phone1:
@@ -183,7 +184,7 @@ input_text:
   message1:
     name: Help Message 1
     max: 500    
-    
+
   contact2:
     name: Contact Name 2  
   phone2:
@@ -193,7 +194,7 @@ input_text:
     pattern: '[0-9]*'
   message2:
     name: Help Message 2
-    
+
   contact3:
     name: Contact Name 3  
   phone3:
@@ -203,7 +204,7 @@ input_text:
     pattern: '[0-9]*'
   message3:
     name: Help Message 3
-    
+
   contact4:
     name: Contact Name 4  
   phone4:
@@ -223,7 +224,7 @@ input_text:
     pattern: '[0-9]*'
   message_alive:
     name: Alive Message
- 
+
 input_boolean:
   notity_enable:
     name: Notify Enable
@@ -233,7 +234,7 @@ input_datetime:
     name: Notify Time
     has_date: false
     has_time: true    
-    
+
 automation pre45:
   - alias: ON Button Pushed
     trigger:
@@ -249,7 +250,7 @@ automation pre45:
       entity_id: 
         - switch.alarm
         - script.alarm
- 
+
   - alias: OFF Button Pushed Before Notify
     trigger:
       platform: state
@@ -304,7 +305,7 @@ automation pre45:
         - script.alarm
         - script.alarm_timer
         - switch.alarm
-        
+
   - alias: Slow Buzzer
     initial_state: false
     trigger:
@@ -338,7 +339,7 @@ automation pre45:
       - service: switch.turn_off
         entity_id: 
           - switch.buzzer  
-          
+
   - alias: Alarm OFF
     trigger:
       platform: state
@@ -368,14 +369,15 @@ automation pre45:
           voice: !secret voice
           language: !secret language
           speed: !secret speed        
-        
 
 # User must turn ON  switch.alive once every
 # 24 hours to stop sending message_alive text
   - alias: Alive Notify
     trigger:
       platform: template
-      value_template: '{{ (states.input_datetime.notify_time.attributes.timestamp | int | timestamp_custom("%H:%M", False)) == states.sensor.time.state}}'
+      value_template: >
+        {{ (states.input_datetime.notify_time.attributes.timestamp | int
+        | timestamp_custom("%H:%M", False)) == states.sensor.time.state}}
     condition:
       condition: and
       conditions:
@@ -392,18 +394,20 @@ automation pre45:
             {{states('input_text.message_alive')}}
           target: >
             +1{{states('input_text.phone_alive')}}
-            
+
   - alias: Alive Reset
     trigger:
       platform: template
-      value_template: '{{ (states.input_datetime.notify_time.attributes.timestamp | int | timestamp_custom("%H:%M", False)) == states.sensor.time.state}}'
+      value_template: >
+        {{ (states.input_datetime.notify_time.attributes.timestamp | int |
+        timestamp_custom("%H:%M", False)) == states.sensor.time.state}}'
     action:            
       - delay: 00:00:01            
       - service: homeassistant.turn_off
         data:
           entity_id: 
             - switch.alive            
-            
+
 script:        
 # Alarm timer is reset if ON button pushed again
   alarm:
@@ -444,35 +448,35 @@ group:
     entities:
     - input_select.alarm_cancel
     - input_text.cancel_message
-    
+
   Contact 1:
     entities:
     - input_text.contact1
     - input_text.phone1
     - input_text.message1
     - input_select.type1
-    
+
   Contact 2:
     entities:
     - input_text.contact2
     - input_text.phone2
     - input_text.message2
     - input_select.type2
-    
+
   Contact 3:
     entities:
     - input_text.contact3
     - input_text.phone3
     - input_text.message3
     - input_select.type3
-    
+
   Contact 4:
     entities:
     - input_text.contact4
     - input_text.phone4
     - input_text.message4
     - input_select.type4
-    
+
   Alive Group:
     control: hidden
     entities:
@@ -482,7 +486,7 @@ group:
       - input_text.alive_contact
       - input_text.phone_alive
       - input_text.message_alive
-  
+
   default_view:
     view: True
     name: Contacts    
@@ -491,17 +495,17 @@ group:
       - group.contact_2
       - group.contact_3
       - group.contact_4
-      
+
   Cancel:      
     view: True
     entities:
       - group.alarm_cancel
-      
+
   Alive:
     view: True
     entities:
       - group.alive_group    
-      
+
 # Use a last tab for back end information not regularly accessed
   Back End:
     view: True
@@ -516,7 +520,3 @@ group:
       - automation.slow_buzzer
       - automation.fast_buzzer
       - sensor.cpu_temperature      
-
-
- 
-
