@@ -1,6 +1,11 @@
 #For Homeassistant
 secrets.yaml
 *.pdf
+.*
+.gitignore
+*.log
+*.db
+
 
 
 
