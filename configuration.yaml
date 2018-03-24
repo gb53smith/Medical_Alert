@@ -329,13 +329,13 @@ automation pre45:
     initial_state: false
     trigger:
       platform: time
-      seconds: '/2'
+      seconds: '/1'
     action:
       - service: switch.turn_on
         entity_id: 
           - switch.buzzer
       - delay:
-          milliseconds: 1000
+          milliseconds: 500
       - service: switch.turn_off
         entity_id: 
           - switch.buzzer  
