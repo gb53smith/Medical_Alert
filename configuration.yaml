@@ -75,6 +75,9 @@ recorder:
   exclude:
     entities:
       - sensor.time
+      - switch.buzzer
+      - automation.low_buzzer
+      - automation.fast_buzzer
 
 # Enables support for tracking state changes over time.
 # Exclude those domains and entities that do not change much 
