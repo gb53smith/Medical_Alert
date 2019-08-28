@@ -110,7 +110,7 @@ binary_sensor:
 
 # Alarm can be canceled by pressing the OFF button before the notify switch
 # is triggered after 30 seconds.  After notify i s triggered it can be
-# canceled by pressing BOTH ON and OFF buttons for 5 seconds or
+# cancelled by pressing OFF button for 5 seconds or
 # Manually sliding the alarm switch OFF from a Web Browser
 # On buzzer is a physical connection
 # on_sw and off_sw is for testing 
