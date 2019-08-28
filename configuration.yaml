@@ -18,17 +18,12 @@ homeassistant:
 #Needed in place of discovery to get hassio menu
 hassio:
 
-http:
-  api_password: !secret api_password
-  ssl_certificate: /ssl/fullchain.pem
-  ssl_key: /ssl/privkey.pem
-  base_url: !secret base_url
+system_health:
 
-panel_iframe:
-  configurator:
-    title: Configurator
-    icon: mdi:wrench
-    url: !secret config_url
+http:
+  #ssl_certificate: /ssl/fullchain.pem
+  #ssl_key: /ssl/privkey.pem
+  base_url: !secret base_url
 
 twilio:
   account_sid: !secret account_sid
@@ -130,11 +125,6 @@ sensor:
   - platform: time_date
     display_options:
       - 'time'
-  - platform: command_line
-    name: CPU Temperature
-    unit_of_measurement: "°C"
-    scan_interval: 300
-    command: "python3 /config/cputemp.py"
 
 #Note: Use input_text to enter phone numbers with a numeric check
 
@@ -312,7 +302,7 @@ automation pre45:
   - alias: Slow Buzzer
     initial_state: false
     trigger:
-      platform: time
+      platform: time_pattern
       seconds: '/5'
     condition:
       condition: state    
@@ -331,7 +321,7 @@ automation pre45:
   - alias: Fast Buzzer
     initial_state: false
     trigger:
-      platform: time
+      platform: time_pattern
       seconds: '/1'
     action:
       - service: switch.turn_on
@@ -521,5 +511,4 @@ group:
       - switch.alive
       - switch.buzzer
       - automation.slow_buzzer
-      - automation.fast_buzzer
-      - sensor.cpu_temperature      
+      - automation.fast_buzzer     
