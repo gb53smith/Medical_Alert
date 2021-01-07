@@ -14,16 +14,18 @@ homeassistant:
   unit_system: metric
   # Pick yours from here: http://en.wikipedia.org/wiki/List_of_tz_database_time_zones
   time_zone: !secret time_zone
+  internal_url: !secret base_url
+  external_url: !secret base_url
 
 #Needed in place of discovery to get hassio menu
 hassio:
 
 system_health:
 
-http:
+#http:
   #ssl_certificate: /ssl/fullchain.pem
   #ssl_key: /ssl/privkey.pem
-  base_url: !secret base_url
+#  base_url: !secret base_url
 
 twilio:
   account_sid: !secret account_sid
@@ -40,14 +42,14 @@ notify:
 python_script:
 
 # Enables the front end
-frontend:
-  javascript_version: es5
+#frontend:
+#javascript_version: es5
 
 # Enables configuration UI
 config:
 
 # Checks for available updates
-updater:
+#updater:
 
 # Discover some devices automatically
 #discovery:
@@ -65,7 +67,7 @@ logbook:
 # Keep database from growing too large by purging
 # Must log automations to restore_state of automations on restart
 recorder:
-  purge_interval: 5
+  auto_purge: true
   purge_keep_days: 7
   exclude:
     entities:
@@ -81,7 +83,6 @@ history:
     domains:
       - automation
       - script
-      - group
       - input_select
       - input_text
     entities:
@@ -282,7 +283,7 @@ automation pre45:
       entity_id: binary_sensor.off_button
       to: 'on'
       for:
-        seconds: 5
+        seconds: 3
     condition:
       condition: and
       conditions:
@@ -436,79 +437,3 @@ script:
           entity_id: 
             - automation.fast_buzzer
 
-group:
-  Alarm Cancel:
-    entities:
-    - input_select.alarm_cancel
-    - input_text.cancel_message
-
-  Contact 1:
-    entities:
-    - input_text.contact1
-    - input_text.phone1
-    - input_text.message1
-    - input_select.type1
-
-  Contact 2:
-    entities:
-    - input_text.contact2
-    - input_text.phone2
-    - input_text.message2
-    - input_select.type2
-
-  Contact 3:
-    entities:
-    - input_text.contact3
-    - input_text.phone3
-    - input_text.message3
-    - input_select.type3
-
-  Contact 4:
-    entities:
-    - input_text.contact4
-    - input_text.phone4
-    - input_text.message4
-    - input_select.type4
-
-  Alive Group:
-    control: hidden
-    entities:
-      - input_boolean.notity_enable
-      - switch.alive
-      - input_datetime.notify_time
-      - input_text.alive_contact
-      - input_text.phone_alive
-      - input_text.message_alive
-
-  default_view:
-    view: True
-    name: Contacts    
-    entities:
-      - group.contact_1
-      - group.contact_2
-      - group.contact_3
-      - group.contact_4
-
-  Cancel:      
-    view: True
-    entities:
-      - group.alarm_cancel
-
-  Alive:
-    view: True
-    entities:
-      - group.alive_group    
-
-# Use a last tab for back end information not regularly accessed
-  Back End:
-    view: True
-    entities:
-      - switch.on_sw
-      - switch.off_sw
-      - binary_sensor.on_button
-      - binary_sensor.off_button
-      - switch.alarm
-      - switch.alive
-      - switch.buzzer
-      - automation.slow_buzzer
-      - automation.fast_buzzer     
