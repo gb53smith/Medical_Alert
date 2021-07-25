@@ -1,0 +1,169 @@
+- alias: ON Button Pushed
+  trigger:
+    platform: state
+    entity_id: binary_sensor.on_button
+    to: 'on'
+  condition:
+    condition: state    
+    entity_id: binary_sensor.off_button
+    state: 'off'  
+  action:
+    service: homeassistant.turn_on
+    entity_id: 
+      - switch.alarm
+      - script.alarm
+
+- alias: OFF Button Pushed Before Notify
+  trigger:
+    platform: state
+    entity_id: binary_sensor.off_button
+    to: 'on'
+  condition:
+    condition: and
+    conditions:
+      - condition: state
+        entity_id: binary_sensor.on_button
+        state: 'off'
+      - condition: state      
+        entity_id: automation.fast_buzzer
+        state: 'off'            
+  action:
+    - service: homeassistant.turn_off
+      entity_id: 
+        - script.alarm
+        - script.alarm_timer
+        - switch.alarm
+    - service: homeassistant.turn_on
+      entity_id: 
+        - switch.alive
+    - service: switch.turn_on
+      entity_id: 
+        - switch.buzzer
+    - delay:
+        milliseconds: 3000
+    - service: switch.turn_off
+      entity_id: 
+        - switch.buzzer           
+
+- alias: OFF Button Pushed After Notify
+  trigger:
+    platform: state
+    entity_id: binary_sensor.off_button
+    to: 'on'
+    for:
+      seconds: 3
+  condition:
+    condition: and
+    conditions:
+      - condition: state      
+        entity_id: binary_sensor.off_button
+        state: 'on'
+      - condition: state      
+        entity_id: automation.fast_buzzer
+        state: 'on'            
+  action:
+    service: homeassistant.turn_off
+    entity_id: 
+      - script.alarm
+      - script.alarm_timer
+      - switch.alarm
+
+- alias: Slow Buzzer
+  initial_state: false
+  trigger:
+    platform: time_pattern
+    seconds: '/5'
+  condition:
+    condition: state    
+    entity_id: automation.fast_buzzer
+    state: 'off'  
+  action:
+    - service: switch.turn_on
+      entity_id: 
+        - switch.buzzer
+    - delay:
+        milliseconds: 1000
+    - service: switch.turn_off
+      entity_id: 
+        - switch.buzzer    
+
+- alias: Fast Buzzer
+  initial_state: false
+  trigger:
+    platform: time_pattern
+    seconds: '/1'
+  action:
+    - service: switch.turn_on
+      entity_id: 
+        - switch.buzzer
+    - delay:
+        milliseconds: 500
+    - service: switch.turn_off
+      entity_id: 
+        - switch.buzzer  
+
+- alias: Alarm OFF
+  trigger:
+    platform: state
+    entity_id: switch.alarm
+    to: 'off'
+  action:
+    service: homeassistant.turn_off
+    entity_id:
+      - switch.buzzer
+      - automation.slow_buzzer
+      - automation.fast_buzzer
+
+- alias: Contact
+  trigger:
+    - platform: state
+      entity_id: automation.fast_buzzer
+      to: 'on'
+    - platform: state
+      entity_id: automation.fast_buzzer
+      to: 'off'      
+  action:
+    - service: python_script.twilio
+      data:
+        contacts: '4'
+        delay: !secret delay
+        loop: !secret loop
+        voice: !secret voice
+        language: !secret language
+        speed: !secret speed        
+
+- alias: Alive Notify
+  trigger:
+    platform: template
+    value_template: >
+      {{ (states.input_datetime.notify_time.attributes.timestamp | int
+      | timestamp_custom("%H:%M", False)) == states.sensor.time.state}}
+  condition:
+    condition: and
+    conditions:
+      - condition: state      
+        entity_id: switch.alive
+        state: 'off'
+      - condition: state      
+        entity_id: input_boolean.notity_enable
+        state: 'on'  
+  action:
+    - service: notify.medical_alert_sms
+      data_template:
+        message: >
+          {{states('input_text.message_alive')}}
+        target: >
+          +1{{states('input_text.phone_alive')}}
+
+- alias: Alive Reset
+  trigger:
+    platform: template
+    value_template: >
+      {{ (states.input_datetime.notify_time.attributes.timestamp | int 
+      | timestamp_custom("%H:%M", False)) == states.sensor.time.state}}
+  action:            
+    - delay: 00:00:01            
+    - service: homeassistant.turn_off
+      data:
+        entity_id: 
+          - switch.alive            

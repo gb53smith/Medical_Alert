@@ -1,0 +1,33 @@
+alarm:
+  alias: Resetable Alarm
+  sequence:
+  - service: homeassistant.turn_off
+    data:
+      entity_id:
+      - script.alarm_timer
+      - switch.buzzer
+  - service: homeassistant.turn_on
+    data:
+      entity_id:
+      - switch.alarm
+      - script.alarm_timer
+  mode: single
+alarm_timer:
+  alias: Alarm Timer
+  sequence:
+  - service: homeassistant.turn_on
+    data:
+      entity_id:
+      - automation.slow_buzzer
+  - delay:
+      minutes: 0
+      seconds: 30
+  - service: homeassistant.turn_off
+    data:
+      entity_id:
+      - automation.slow_buzzer
+  - service: homeassistant.turn_on
+    data:
+      entity_id:
+      - automation.fast_buzzer
+  mode: single
