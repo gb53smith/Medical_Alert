@@ -20,8 +20,11 @@ hassio:
 
 system_health:
 
-#For DuckDNS Add-on
+#For DuckDNS Add-on and remote connection
 http:
+  use_x_forwarded_for: true
+  trusted_proxies:
+    - 172.30.33.0/24
 
 
 twilio:
